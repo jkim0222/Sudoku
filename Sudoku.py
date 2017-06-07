@@ -105,74 +105,69 @@ def show_cand(s):
             if s[y][x] == 0:
                 print("Candidates for", y, "x", x, "=", cand[y][x])
 
-def fix(s, debug):
-    fixed = 0
+def find_naked_singles(s, debug):
+    found = 0
     for y in range(9):
         for x in range(9):
             if s[y][x] == 0 and len(cand[y][x]) == 1:
                 s[y][x] = cand[y][x][0]
                 if debug > 1:
-                    print("Fixing", y, "x", x, "with", cand[y][x][0])
-                fixed += 1
+                    print("Naked single", cand[y][x][0], "on", y, "x", x)
+                found += 1
     if debug:
-        print("Fixed", fixed, "sudoku(s).")
-    return fixed
-
-def hidden_single(s, y, x, k):
-    y_hidden = False
-    x_hidden = False
-    if ((y % 3 == 0 and (s[y + 1][x] or k in ey[y + 1]) and (s[y + 2][x] or k in ey[y + 2])) or
-        (y % 3 == 1 and (s[y - 1][x] or k in ey[y - 1]) and (s[y + 1][x] or k in ey[y + 1])) or
-        (y % 3 == 2 and (s[y - 2][x] or k in ey[y - 2]) and (s[y - 1][x] or k in ey[y - 1]))):
-        y_hidden = True
-    if ((x % 3 == 0 and (s[y][x + 1] or k in ex[x + 1]) and (s[y][x + 2] or k in ex[x + 2])) or
-        (x % 3 == 1 and (s[y][x - 1] or k in ex[x - 1]) and (s[y][x + 1] or k in ex[x + 1])) or
-        (x % 3 == 2 and (s[y][x - 2] or k in ex[x - 2]) and (s[y][x - 1] or k in ex[x - 1]))):
-        x_hidden = True
-    return y_hidden and x_hidden
+        print("Found", found, "naked single(s).")
+    return found
 
 def find_hidden_singles(s, debug):
-    fixed = 0
+    found = 0
     for y in range(9):
+        n_cands = [0] * 10      # 10 for readability
+        hidden_in = [0] * 10
         for x in range(9):
-            if s[y][x] == 0 and len(cand[y][x]) > 0:
+            if s[y][x] == 0:
                 for i in range(len(cand[y][x])):
-                    if hidden_single(s, y, x, cand[y][x][i]):
-                        s[y][x] = cand[y][x][i]
-                        if debug > 1:
-                            print("Hidden single", cand[y][x][i], "on", y, "x", x)
-                        fixed += 1
-    if debug:
-        print("Found", fixed, "hidden single(s).")
-    return fixed
-
-def naked_single(s, y, x, k):
-    y_naked = False
-    x_naked = False
-    if ((y % 3 == 0 and k in ey[y + 1] and k in ey[y + 2]) or
-        (y % 3 == 1 and k in ey[y - 1] and k in ey[y + 1]) or
-        (y % 3 == 2 and k in ey[y - 2] and k in ey[y - 1])):
-        y_naked = True
-    if ((x % 3 == 0 and k in ex[x + 1] and k in ex[x + 2]) or
-        (x % 3 == 1 and k in ex[x - 1] and k in ex[x + 1]) or
-        (x % 3 == 2 and k in ex[x - 2] and k in ex[x - 1])):
-        x_naked = True
-    return y_naked and x_naked
-
-def find_naked_singles(s, debug):
-    fixed = 0
-    for y in range(9):
-        for x in range(9):
-            if s[y][x] == 0 and len(cand[y][x]) > 0:
+                    n_cands[cand[y][x][i]] += 1
+                    hidden_in[cand[y][x][i]] = x
+        for i in range(1, 10):
+            if n_cands[i] == 1:
+                s[y][hidden_in[i]] = i
+                if debug > 1:
+                    print("Hidden single", i, "on row", y, "x = ", hidden_in[i])
+                found += 1
+    for x in range(9):
+        n_cands = [0] * 10      # 10 for readability
+        hidden_in = [0] * 10
+        for y in range(9):
+            if s[y][x] == 0:
                 for i in range(len(cand[y][x])):
-                    if naked_single(s, y, x, cand[y][x][i]):
-                        s[y][x] = cand[y][x][i]
-                        if debug > 1:
-                            print("Naked single", cand[y][x], "on", y, "x", x)
-                        fixed += 1
+                    n_cands[cand[y][x][i]] += 1
+                    hidden_in[cand[y][x][i]] = y
+        for i in range(1, 10):
+            if n_cands[i] == 1:
+                s[hidden_in[i]][x] = i
+                if debug > 1:
+                    print("Hidden single", i, "on column", x, "y = ", hidden_in[i])
+                found += 1
+    for i in range(9):
+        n_cands = [0] * 10      # 10 for readability
+        hidden_in_y = [0] * 10
+        hidden_in_x = [0] * 10
+        for y in range((i // 3) * 3, (i // 3) * 3 + 3):
+            for x in range((i % 3) * 3, (i % 3) * 3 + 3):
+                if s[y][x] == 0:
+                    for j in range(len(cand[y][x])):
+                        n_cands[cand[y][x][j]] += 1
+                        hidden_in_y[cand[y][x][j]] = y
+                        hidden_in_x[cand[y][x][j]] = x
+        for j in range(1, 10):
+            if n_cands[j] == 1:
+                s[hidden_in_y[j]][hidden_in_x[j]] = j
+                if debug > 1:
+                    print("Hidden single", j, "in block", i, "on", hidden_in_y[j], "x", hidden_in_x[j])
+                found += 1
     if debug:
-        print("Found", fixed, "naked single(s).")
-    return fixed
+        print("Found", found, "hidden single(s).")
+    return found
 
 def main(n, debug):
     s = sudokus[n]
@@ -180,16 +175,16 @@ def main(n, debug):
     make_e_cand()
     while (f < 81):
         update_e_cand(s)
+        found = 0
         if debug > 1:
             show_cand(s)
-        fixed = fix(s, debug)
-        found_naked_single = find_naked_singles(s, debug)
-        found_hidden_single = find_hidden_singles(s, debug)
-        if fixed + found_naked_single + found_hidden_single == 0:
+        found += find_naked_singles(s, debug)
+        found += find_hidden_singles(s, debug)
+        if found == 0:
             break;
-        f += fixed + found_naked_single + found_hidden_single
+        f += found
         if debug:
             print(str(81-f), "more to go.")
     show_sudoku(s)
 
-main(2, 2)
+main(1, 2)
